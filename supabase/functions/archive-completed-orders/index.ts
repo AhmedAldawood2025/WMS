@@ -1,23 +1,29 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { json, preflight } from '../_shared/http.ts';
+import { requireSharedSecret } from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
-};
+/*
+  Scheduled job: archive orders completed more than 24 hours ago.
 
+  Invoked by a scheduler rather than a signed-in user, so it is gated on a shared
+  secret instead of an admin JWT. Without a gate, anyone who knew the URL could
+  archive orders at will — the client below uses the service-role key and so
+  bypasses RLS.
+
+    supabase secrets set ARCHIVE_JOB_SECRET=...   # sent as the X-Secret header
+*/
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return preflight();
 
   try {
+    const denied = requireSharedSecret(req, 'ARCHIVE_JOB_SECRET');
+    if (denied) return denied;
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Archive all completed orders where completed_at is more than 24 hours ago
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
@@ -30,14 +36,8 @@ Deno.serve(async (req: Request) => {
 
     if (error) throw error;
 
-    return new Response(
-      JSON.stringify({ archived: data?.length ?? 0 }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return json({ archived: data?.length ?? 0 });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
 });
