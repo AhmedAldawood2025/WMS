@@ -24,16 +24,16 @@ interface WarehouseStock {
 
 interface StockAdjustment {
   id: string;
-  item_id: string;
+  item_id: string | null;
   adjustment_type: string;
-  old_purchase_units: number;
-  new_purchase_units: number;
-  difference_purchase_units: number;
+  quantity_before: number;
+  quantity_after: number;
+  difference: number;
   reason: string;
-  created_at: string;
-  created_by_profile: {
+  created_at: string | null;
+  adjusted_by_profile: {
     display_name: string;
-  };
+  } | null;
 }
 
 export function StockAdjustments() {
@@ -67,7 +67,7 @@ export function StockAdjustments() {
           .from('stock_adjustments')
           .select(`
             *,
-            created_by_profile:profiles(display_name)
+            adjusted_by_profile:profiles!stock_adjustments_adjusted_by_fkey(display_name)
           `)
           .eq('adjustment_type', 'warehouse')
           .order('created_at', { ascending: false })
@@ -94,6 +94,11 @@ export function StockAdjustments() {
       return;
     }
 
+    if (!user) {
+      alert('You must be signed in to record an adjustment');
+      return;
+    }
+
     try {
       const stockItem = warehouseStock.find(s => s.item_id === selectedItemId);
       if (!stockItem) {
@@ -104,13 +109,14 @@ export function StockAdjustments() {
       const { error } = await supabase
         .from('stock_adjustments')
         .insert([{
-          item_id: selectedItemId,
           adjustment_type: 'warehouse',
-          old_purchase_units: stockItem.current_stock_purchase_units,
-          new_purchase_units: newStockLevel,
-          difference_purchase_units: newStockLevel - stockItem.current_stock_purchase_units,
+          item_id: selectedItemId,
+          reference_id: selectedItemId,
+          quantity_before: stockItem.current_stock_purchase_units,
+          quantity_after: newStockLevel,
+          difference: newStockLevel - stockItem.current_stock_purchase_units,
           reason,
-          created_by: user?.id,
+          adjusted_by: user.id,
         }]);
 
       if (error) throw error;
@@ -300,31 +306,31 @@ export function StockAdjustments() {
               adjustments.map((adj) => (
                 <tr key={adj.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {new Date(adj.created_at).toLocaleString()}
+                    {adj.created_at ? new Date(adj.created_at).toLocaleString() : '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-900">
-                    Item {adj.item_id.substring(0, 8)}...
+                    {adj.item_id ? `Item ${adj.item_id.substring(0, 8)}...` : '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {Math.round(adj.old_purchase_units)}
+                    {Math.round(adj.quantity_before)}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {Math.round(adj.new_purchase_units)}
+                    {Math.round(adj.quantity_after)}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 text-xs font-medium rounded ${
-                      adj.difference_purchase_units >= 0
+                      adj.difference >= 0
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {adj.difference_purchase_units >= 0 ? '+' : ''}{Math.round(adj.difference_purchase_units)}
+                      {adj.difference >= 0 ? '+' : ''}{Math.round(adj.difference)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">
                     {adj.reason}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {adj.created_by_profile?.display_name || 'Unknown'}
+                    {adj.adjusted_by_profile?.display_name || 'Unknown'}
                   </td>
                 </tr>
               ))
