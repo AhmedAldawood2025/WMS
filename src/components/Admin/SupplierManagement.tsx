@@ -9,8 +9,17 @@ interface Supplier {
   phone: string | null;
   email: string | null;
   address: string | null;
-  type: 'warehouse' | 'raw_material' | 'both';
-  created_at: string;
+  type: string;
+  created_at: string | null;
+}
+
+interface SupplierFormData {
+  name: string;
+  contact_person: string;
+  phone: string;
+  email: string;
+  address: string;
+  type: string;
 }
 
 export function SupplierManagement() {
@@ -18,13 +27,13 @@ export function SupplierManagement() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SupplierFormData>({
     name: '',
     contact_person: '',
     phone: '',
     email: '',
     address: '',
-    type: 'warehouse' as 'warehouse' | 'raw_material' | 'both',
+    type: 'warehouse',
   });
 
   useEffect(() => {

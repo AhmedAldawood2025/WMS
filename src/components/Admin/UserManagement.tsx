@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { Edit, Trash2 } from 'lucide-react';
 import type { Database } from '../../lib/database.types';
 
@@ -20,7 +19,6 @@ export function UserManagement() {
   });
   const [submitting, setSubmitting] = useState(false);
   const { t } = useLanguage();
-  const { signUp } = useAuth();
 
   useEffect(() => {
     loadUsers();
@@ -271,7 +269,7 @@ export function UserManagement() {
                   {t(user.role)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                  {new Date(user.created_at).toLocaleDateString()}
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex gap-2">

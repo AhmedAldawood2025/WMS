@@ -216,6 +216,7 @@ export function AccountantRawMaterialPOView() {
   const handleCreatePO = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPOItems.length === 0) { alert('Add at least one item'); return; }
+    if (!user) { alert('You must be signed in to create a purchase order'); return; }
     setSaving(true);
     try {
       const subtotal = newPOItems.reduce((s, i) => s + i.quantity * i.unit_price, 0);
@@ -226,7 +227,10 @@ export function AccountantRawMaterialPOView() {
         .from('raw_material_purchase_orders')
         .insert([{
           supplier_id: newFormData.supplier_id,
-          created_by: user?.id,
+          created_by: user.id,
+          // Left blank on purpose: the set_raw_material_po_number BEFORE INSERT
+          // trigger generates the RPO-... number when po_number is null or ''.
+          po_number: '',
           status: 'pending',
           subtotal,
           vat_rate: newFormData.vat_rate,

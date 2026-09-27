@@ -10,7 +10,7 @@ interface PurchaseOrder {
   vat_rate: number;
   vat_amount: number;
   total: number;
-  created_at: string;
+  created_at: string | null;
   supplier: { name: string };
   items: any[];
 }
@@ -30,24 +30,39 @@ export function AccountantPOView({ type }: Props) {
 
   const loadPurchaseOrders = async () => {
     try {
-      const table = type === 'warehouse' ? 'warehouse_purchase_orders' : 'raw_material_purchase_orders';
-      const itemsTable = type === 'warehouse' ? 'warehouse_po_items' : 'raw_material_po_items';
+      if (type === 'warehouse') {
+        const { data, error } = await supabase
+          .from('warehouse_purchase_orders')
+          .select(`
+            *,
+            supplier:suppliers(name),
+            warehouse_po_items(*)
+          `)
+          .order('created_at', { ascending: false });
 
-      const { data, error } = await supabase
-        .from(table)
-        .select(`
-          *,
-          supplier:suppliers(name),
-          ${itemsTable}(*)
-        `)
-        .order('created_at', { ascending: false });
+        if (error) throw error;
 
-      if (error) throw error;
+        setPurchaseOrders((data || []).map(po => ({
+          ...po,
+          items: po.warehouse_po_items || []
+        })));
+      } else {
+        const { data, error } = await supabase
+          .from('raw_material_purchase_orders')
+          .select(`
+            *,
+            supplier:suppliers(name),
+            raw_material_po_items(*)
+          `)
+          .order('created_at', { ascending: false });
 
-      setPurchaseOrders((data || []).map(po => ({
-        ...po,
-        items: po[itemsTable] || []
-      })));
+        if (error) throw error;
+
+        setPurchaseOrders((data || []).map(po => ({
+          ...po,
+          items: po.raw_material_po_items || []
+        })));
+      }
     } catch (error) {
       console.error('Error loading purchase orders:', error);
     } finally {
@@ -74,7 +89,7 @@ export function AccountantPOView({ type }: Props) {
       po.subtotal.toFixed(2),
       po.vat_amount.toFixed(2),
       po.total.toFixed(2),
-      new Date(po.created_at).toLocaleDateString(),
+      po.created_at ? new Date(po.created_at).toLocaleDateString() : '',
     ]);
 
     const csvContent = [
@@ -157,7 +172,7 @@ export function AccountantPOView({ type }: Props) {
                     SR {po.total.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {new Date(po.created_at).toLocaleDateString()}
+                    {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -203,7 +218,7 @@ export function AccountantPOView({ type }: Props) {
                 </div>
                 <div>
                   <span className="text-slate-600">Date:</span>
-                  <p className="font-medium">{new Date(selectedPO.created_at).toLocaleString()}</p>
+                  <p className="font-medium">{selectedPO.created_at ? new Date(selectedPO.created_at).toLocaleString() : '-'}</p>
                 </div>
               </div>
 

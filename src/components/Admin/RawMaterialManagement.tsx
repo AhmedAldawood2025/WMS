@@ -10,7 +10,7 @@ interface RawMaterial {
   minimum_stock_level: number;
   current_stock: number;
   supplier_id: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 
 interface Supplier {

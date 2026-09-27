@@ -105,13 +105,14 @@ export function ProductionBatches() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) { alert('You must be signed in to record a production batch'); return; }
     if (inputs.length === 0) { alert('Please add at least one raw material input'); return; }
     if (outputs.length === 0) { alert('Please add at least one factory item output'); return; }
 
     try {
       const { data: batch, error: batchError } = await supabase
         .from('production_batches')
-        .insert([{ production_date: formData.production_date, created_by: user?.id, notes: formData.notes }])
+        .insert([{ batch_number: '', production_date: formData.production_date, created_by: user.id, notes: formData.notes }])
         .select().single();
       if (batchError) throw batchError;
 

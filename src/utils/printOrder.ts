@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-export async function printOrder(orderId: string, t: (key: string) => string, userRole?: string) {
+export async function printOrder(orderId: string, t: (key: string) => string, _userRole?: string) {
   try {
     const { data: order, error } = await supabase
       .from('orders')

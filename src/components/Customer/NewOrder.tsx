@@ -16,7 +16,7 @@ interface Item {
   serial: string;
   name: string;
   category: string;
-  stock_level_required: boolean;
+  stock_level_required: boolean | null;
   picture_url?: string | null;
 }
 
@@ -117,7 +117,9 @@ export function NewOrder({ showAllBranches = false, managerMode = false }: NewOr
       if (warehouseOrderItems.length > 0) {
         const { data: warehouseOrder, error: warehouseOrderError } = await supabase
           .from('orders')
-          .insert([{ branch_id: selectedBranch, customer_id: user?.id || '', status: 'pending', category: 'warehouse' }])
+          // order_number is sent empty on purpose: the set_order_number_trigger
+          // on orders generates the real W-prefixed number before insert.
+          .insert([{ branch_id: selectedBranch, customer_id: user?.id || '', status: 'pending', category: 'warehouse', order_number: '' }])
           .select()
           .single();
         if (warehouseOrderError) throw warehouseOrderError;
@@ -133,7 +135,9 @@ export function NewOrder({ showAllBranches = false, managerMode = false }: NewOr
       if (factoryOrderItems.length > 0) {
         const { data: factoryOrder, error: factoryOrderError } = await supabase
           .from('orders')
-          .insert([{ branch_id: selectedBranch, customer_id: user?.id || '', status: 'pending', category: 'factory' }])
+          // order_number is sent empty on purpose: the set_order_number_trigger
+          // on orders generates the real F-prefixed number before insert.
+          .insert([{ branch_id: selectedBranch, customer_id: user?.id || '', status: 'pending', category: 'factory', order_number: '' }])
           .select()
           .single();
         if (factoryOrderError) throw factoryOrderError;

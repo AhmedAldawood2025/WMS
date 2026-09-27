@@ -10,7 +10,7 @@ interface PurchaseOrder {
   vat_rate: number;
   vat_amount: number;
   total: number;
-  created_at: string;
+  created_at: string | null;
   notes: string | null;
   supplier: { name: string };
   type: 'warehouse' | 'raw_material';
@@ -64,7 +64,11 @@ export function PurchaseOrderApprovals() {
           type: 'raw_material' as const,
           items: po.raw_material_po_items
         }))
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      ].sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
 
       setPendingPOs(allPOs);
     } catch (error) {
@@ -174,7 +178,7 @@ export function PurchaseOrderApprovals() {
                     SR {po.total.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {new Date(po.created_at).toLocaleDateString()}
+                    {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -232,7 +236,7 @@ export function PurchaseOrderApprovals() {
                 </div>
                 <div>
                   <span className="text-slate-600">Date:</span>
-                  <p className="font-medium">{new Date(selectedPO.created_at).toLocaleString()}</p>
+                  <p className="font-medium">{selectedPO.created_at ? new Date(selectedPO.created_at).toLocaleString() : '-'}</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Status:</span>

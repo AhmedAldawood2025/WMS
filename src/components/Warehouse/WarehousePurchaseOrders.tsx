@@ -38,7 +38,7 @@ interface PurchaseOrder {
   vat_rate: number;
   vat_amount: number;
   total: number;
-  created_at: string;
+  created_at: string | null;
   supplier: Supplier;
   warehouse_po_items: any[];
 }
@@ -148,6 +148,11 @@ export function WarehousePurchaseOrders() {
       return;
     }
 
+    if (!user) {
+      alert('You must be signed in to create a purchase order');
+      return;
+    }
+
     try {
       const { subtotal, vat_amount, total } = calculateTotals();
 
@@ -155,7 +160,10 @@ export function WarehousePurchaseOrders() {
         .from('warehouse_purchase_orders')
         .insert([{
           supplier_id: formData.supplier_id,
-          created_by: user?.id,
+          created_by: user.id,
+          // Left blank on purpose: the set_warehouse_po_number BEFORE INSERT
+          // trigger generates the WPO-... number when po_number is null or ''.
+          po_number: '',
           status: 'pending',
           subtotal,
           vat_rate: formData.vat_rate,
@@ -462,7 +470,7 @@ export function WarehousePurchaseOrders() {
                     SR {po.total.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
-                    {new Date(po.created_at).toLocaleDateString()}
+                    {po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -519,7 +527,7 @@ export function WarehousePurchaseOrders() {
                 </div>
                 <div>
                   <span className="text-slate-600">Date:</span>
-                  <p className="font-medium">{new Date(selectedPO.created_at).toLocaleString()}</p>
+                  <p className="font-medium">{selectedPO.created_at ? new Date(selectedPO.created_at).toLocaleString() : '-'}</p>
                 </div>
               </div>
 
