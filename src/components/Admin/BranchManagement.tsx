@@ -10,7 +10,7 @@ interface Branch {
   location: string;
   code: string | null;
   internal_only: boolean;
-  created_at: string;
+  created_at: string | null;
 }
 
 export function BranchManagement() {
@@ -87,7 +87,7 @@ export function BranchManagement() {
           .insert([{ ...formData, created_by: user?.id }]);
         if (error) throw error;
       }
-      setFormData({ name: '', location: '', code: '' });
+      setFormData({ name: '', location: '', code: '', internal_only: false });
       setShowForm(false);
       setEditingBranch(null);
       await loadBranches();
@@ -243,7 +243,7 @@ export function BranchManagement() {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                  {new Date(branch.created_at).toLocaleDateString()}
+                  {branch.created_at ? new Date(branch.created_at).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex gap-2">

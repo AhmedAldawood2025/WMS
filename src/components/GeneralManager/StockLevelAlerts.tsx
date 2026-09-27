@@ -1,24 +1,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AlertTriangle, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../../contexts/LanguageContext';
+import type { Json } from '../../lib/database.types';
 
 interface WarehouseAlert {
   item_id: string;
   current_stock_purchase_units: number;
-  item: { serial: string; name: string };
-  warehouse_units: {
-    purchase_unit: string;
-    minimum_stock_purchase_units: number;
-  };
+  item: Json;
+  warehouse_units: Json;
 }
 
 interface FactoryAlert {
   item_id: string;
   current_stock: number;
   minimum_stock_level: number;
-  item: { serial: string; name: string };
+  item: Json;
 }
 
 interface RawMaterialAlert {
@@ -29,8 +25,19 @@ interface RawMaterialAlert {
   minimum_stock_level: number;
 }
 
+function jsonObject(value: Json | undefined): { [key: string]: Json | undefined } {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function jsonText(value: Json | undefined): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function jsonNumber(value: Json | undefined): number {
+  return typeof value === 'number' ? value : 0;
+}
+
 export function StockLevelAlerts() {
-  const { t } = useLanguage();
   const [warehouseAlerts, setWarehouseAlerts] = useState<WarehouseAlert[]>([]);
   const [factoryAlerts, setFactoryAlerts] = useState<FactoryAlert[]>([]);
   const [rawMaterialAlerts, setRawMaterialAlerts] = useState<RawMaterialAlert[]>([]);
@@ -103,18 +110,22 @@ export function StockLevelAlerts() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {warehouseAlerts.map((alert) => (
+                  {warehouseAlerts.map((alert) => {
+                    const item = jsonObject(alert.item);
+                    const units = jsonObject(alert.warehouse_units);
+                    const purchaseUnit = jsonText(units.purchase_unit);
+                    return (
                     <tr key={alert.item_id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                        {alert.item.serial} - {alert.item.name}
+                        {jsonText(item.serial)} - {jsonText(item.name)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">
-                          {Math.round(alert.current_stock_purchase_units)} {alert.warehouse_units.purchase_unit}
+                          {Math.round(alert.current_stock_purchase_units)} {purchaseUnit}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
-                        {Math.round(alert.warehouse_units.minimum_stock_purchase_units)} {alert.warehouse_units.purchase_unit}
+                        {Math.round(jsonNumber(units.minimum_stock_purchase_units))} {purchaseUnit}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -126,7 +137,8 @@ export function StockLevelAlerts() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -148,10 +160,12 @@ export function StockLevelAlerts() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {factoryAlerts.map((alert) => (
+                  {factoryAlerts.map((alert) => {
+                    const item = jsonObject(alert.item);
+                    return (
                     <tr key={alert.item_id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                        {alert.item.serial} - {alert.item.name}
+                        {jsonText(item.serial)} - {jsonText(item.name)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">
@@ -170,7 +184,8 @@ export function StockLevelAlerts() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

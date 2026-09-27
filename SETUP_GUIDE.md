@@ -100,10 +100,45 @@ The system supports 6 different roles:
 
 ### Security
 - Row Level Security (RLS) enabled on all tables
-- Role-based access control
+- Role-based access control, resolved from `profiles.role`
 - Secure authentication with Supabase
 - Data integrity enforced at database level
 - Automatic stock update triggers
+
+#### How roles are resolved
+
+`profiles.role` is the single source of truth. Policies read it through the
+`current_user_role()` helper, and the admin edge functions check it before doing
+anything with the service-role key.
+
+Do not authorize off `auth.jwt()->'user_metadata'->>'role'`. A user can rewrite
+their own `user_metadata` with `supabase.auth.updateUser()`, so a role claim in a
+token proves nothing. For the same reason `handle_new_user()` always assigns
+`customer` at signup and ignores the metadata the client supplied — privileged
+roles are granted afterwards by an admin, through User Management.
+
+Do not add a policy letting users UPDATE their own `profiles` row either; that
+would let them set their own `role` and reopen the same hole.
+
+#### Edge function secrets
+
+Set these with `supabase secrets set <NAME>=<value>`:
+
+| Secret | Used by | Purpose |
+| --- | --- | --- |
+| `ALLOWED_ORIGIN` | all functions | Restricts CORS to your app's origin. Defaults to `*`. |
+| `SEED_SECRET` | `create-initial-users` | Sent as the `X-Secret` header to authorize bootstrap. |
+| `SEED_ADMIN_EMAIL` | `create-initial-users` | Email for the first admin. |
+| `SEED_ADMIN_PASSWORD` | `create-initial-users` | Password for the first admin. Required — there is no default. |
+| `SEED_TEST_EMAIL` | `create-initial-users` | Optional test customer. |
+| `SEED_TEST_PASSWORD` | `create-initial-users` | Optional test customer. |
+| `ARCHIVE_JOB_SECRET` | `archive-completed-orders` | Sent as the `X-Secret` header by the scheduler. |
+
+`admin-create-user` and `admin-update-user` need no secret of their own: they
+require the caller's own access token and verify that caller is an admin.
+
+Once the first admin exists, unset the `SEED_*` secrets and delete the
+`create-initial-users` function — the manual route above works just as well.
 
 ## Database Schema
 

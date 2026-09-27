@@ -89,7 +89,7 @@ export function DailyFactoryOperation() {
   const [factoryItems, setFactoryItems] = useState<FactoryItem[]>([]);
 
   const [rmSnapshots, setRmSnapshots] = useState<Record<string, number>>({});
-  const [itemSnapshots, setItemSnapshots] = useState<Record<string, number>>({});
+  const [, setItemSnapshots] = useState<Record<string, number>>({});
 
   const [supplyEntries, setSupplyEntries] = useState<SupplyEntry[]>([]);
   const [processEntries, setProcessEntries] = useState<ProcessEntry[]>([]);
@@ -134,7 +134,8 @@ export function DailyFactoryOperation() {
       .lte('order.created_at', dateEnd);
 
     const demand: Record<string, number> = {};
-    (orderItems || []).forEach((oi: { item_id: string; quantity: number }) => {
+    (orderItems || []).forEach((oi: { item_id: string | null; quantity: number }) => {
+      if (!oi.item_id) return;
       demand[oi.item_id] = (demand[oi.item_id] || 0) + oi.quantity;
     });
     return demand;
@@ -391,11 +392,14 @@ export function DailyFactoryOperation() {
     });
 
     for (const [supplierId, entries] of Object.entries(bySupplier)) {
+      if (!user?.id) throw new Error('Cannot create a purchase order without a signed-in user');
       const subtotal = entries.reduce((sum, e) => sum + e.total_price, 0);
       const { data: po, error: poErr } = await supabase
         .from('raw_material_purchase_orders')
         .insert([{
-          supplier_id: supplierId, created_by: user?.id,
+          supplier_id: supplierId, created_by: user.id,
+          // set_raw_material_po_number trigger generates the real number for '' / NULL
+          po_number: '',
           status: markSubmitted ? 'received' : 'pending',
           subtotal, vat_rate: 0, vat_amount: 0, total: subtotal,
           notes: `Daily operation ${operation?.operation_date}`,
@@ -506,30 +510,34 @@ export function DailyFactoryOperation() {
       }
 
       // Create a production batch record linking to this daily op
-      const { data: batch, error: batchErr } = await supabase
-        .from('production_batches')
-        .insert([{
-          production_date: operation?.operation_date,
-          created_by: user?.id,
-          notes: `Daily operation ${operation?.operation_date}`,
-          daily_operation_id: opId,
-        }])
-        .select('id')
-        .single();
+      if (user?.id) {
+        const { data: batch, error: batchErr } = await supabase
+          .from('production_batches')
+          .insert([{
+            // set_batch_number trigger generates the real number for '' / NULL
+            batch_number: '',
+            production_date: operation?.operation_date,
+            created_by: user.id,
+            notes: `Daily operation ${operation?.operation_date}`,
+            daily_operation_id: opId,
+          }])
+          .select('id')
+          .single();
 
-      if (!batchErr && batch) {
-        // Inputs: process entries
-        if (validProcess.length > 0) {
-          await supabase.from('production_inputs').insert(
-            validProcess.map(e => ({ batch_id: batch.id, raw_material_id: e.raw_material_id, quantity_used: e.quantity }))
-          );
-        }
-        // Outputs: production entries with production_qty > 0
-        const outputItems = validProduction.filter(e => e.production_qty > 0);
-        if (outputItems.length > 0) {
-          await supabase.from('production_outputs').insert(
-            outputItems.map(e => ({ batch_id: batch.id, item_id: e.item_id, quantity_produced: e.production_qty }))
-          );
+        if (!batchErr && batch) {
+          // Inputs: process entries
+          if (validProcess.length > 0) {
+            await supabase.from('production_inputs').insert(
+              validProcess.map(e => ({ batch_id: batch.id, raw_material_id: e.raw_material_id, quantity_used: e.quantity }))
+            );
+          }
+          // Outputs: production entries with production_qty > 0
+          const outputItems = validProduction.filter(e => e.production_qty > 0);
+          if (outputItems.length > 0) {
+            await supabase.from('production_outputs').insert(
+              outputItems.map(e => ({ batch_id: batch.id, item_id: e.item_id, quantity_produced: e.production_qty }))
+            );
+          }
         }
       }
 

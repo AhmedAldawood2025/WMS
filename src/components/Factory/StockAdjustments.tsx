@@ -139,8 +139,12 @@ export function FactoryStockAdjustments() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
     setShowConfirm(false);
+    if (!user) {
+      showToast('error', 'Failed to save adjustments');
+      return;
+    }
+    setSaving(true);
     try {
       if (mode === 'factory_item') {
         for (const row of dirtyFactory) {
@@ -155,7 +159,7 @@ export function FactoryStockAdjustments() {
             quantity_after: newQty,
             difference: diff,
             reason,
-            adjusted_by: user?.id,
+            adjusted_by: user.id,
           }]);
           if (adjErr) throw adjErr;
           const { error: stockErr } = await supabase
@@ -176,7 +180,7 @@ export function FactoryStockAdjustments() {
             quantity_after: newQty,
             difference: diff,
             reason,
-            adjusted_by: user?.id,
+            adjusted_by: user.id,
           }]);
           if (adjErr) throw adjErr;
           const { error: rmErr } = await supabase.from('raw_materials').update({ current_stock: newQty }).eq('id', row.id);

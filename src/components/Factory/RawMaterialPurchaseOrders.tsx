@@ -32,7 +32,7 @@ interface PurchaseOrder {
   vat_amount: number;
   total: number;
   notes: string | null;
-  created_at: string;
+  created_at: string | null;
   supplier: Supplier;
   raw_material_po_items: RawMaterialPOItem[];
   // joined from daily_supply_entries
@@ -102,7 +102,7 @@ export function RawMaterialPurchaseOrders() {
         (dailyLinks || []).forEach((l: { po_id: string | null }) => { if (l.po_id) dailyOpPoIds.add(l.po_id); });
       }
 
-      const orders = (posRes.data || []).map((po: PurchaseOrder & { notes: string | null }) => ({
+      const orders = (posRes.data || []).map((po) => ({
         ...po,
         is_daily_op: dailyOpPoIds.has(po.id) || (po.notes?.startsWith('Daily operation') ?? false),
       }));
@@ -126,12 +126,25 @@ export function RawMaterialPurchaseOrders() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (poItems.length === 0) { alert('Please add at least one item'); return; }
+    if (!user) { alert('You must be signed in to create a purchase order'); return; }
 
     try {
       const { subtotal, vat_amount, total } = calculateTotals();
       const { data: po, error: poError } = await supabase
         .from('raw_material_purchase_orders')
-        .insert([{ supplier_id: formData.supplier_id, created_by: user?.id, status: 'pending', subtotal, vat_rate: formData.vat_rate, vat_amount, total, notes: formData.notes }])
+        .insert([{
+          supplier_id: formData.supplier_id,
+          created_by: user.id,
+          // Left blank on purpose: the set_raw_material_po_number BEFORE INSERT
+          // trigger fills this in when it is null or an empty string.
+          po_number: '',
+          status: 'pending',
+          subtotal,
+          vat_rate: formData.vat_rate,
+          vat_amount,
+          total,
+          notes: formData.notes,
+        }])
         .select().single();
       if (poError) throw poError;
 
@@ -197,7 +210,7 @@ export function RawMaterialPurchaseOrders() {
                   <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusBadge(po.status)}`}>{po.status}</span>
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-slate-900">{po.total.toFixed(2)}</td>
-                <td className="px-4 py-3 text-sm text-slate-600">{new Date(po.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-sm text-slate-600">{po.created_at ? new Date(po.created_at).toLocaleDateString() : '-'}</td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => setSelectedPO(po)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="View Details">
                     <Eye className="w-4 h-4" />
@@ -345,7 +358,7 @@ export function RawMaterialPurchaseOrders() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-slate-600">Supplier:</span><p className="font-medium">{selectedPO.supplier.name}</p></div>
                 <div><span className="text-slate-600">Status:</span><p><span className={`px-2 py-1 text-xs font-medium rounded ${getStatusBadge(selectedPO.status)}`}>{selectedPO.status}</span></p></div>
-                <div><span className="text-slate-600">Date:</span><p className="font-medium">{new Date(selectedPO.created_at).toLocaleString()}</p></div>
+                <div><span className="text-slate-600">Date:</span><p className="font-medium">{selectedPO.created_at ? new Date(selectedPO.created_at).toLocaleString() : '-'}</p></div>
                 {selectedPO.notes && <div><span className="text-slate-600">Notes:</span><p className="font-medium">{selectedPO.notes}</p></div>}
               </div>
 

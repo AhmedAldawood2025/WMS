@@ -9,12 +9,20 @@ interface Item {
   id: string;
   serial: string;
   name: string;
-  description: string;
-  category: 'warehouse' | 'factory';
-  stock_level_required: boolean;
+  description: string | null;
+  category: string;
+  stock_level_required: boolean | null;
   picture_url: string | null;
-  order_index: number;
-  created_at: string;
+  order_index: number | null;
+  created_at: string | null;
+}
+
+interface ItemFormData {
+  serial: string;
+  name: string;
+  description: string;
+  category: string;
+  stock_level_required: boolean;
 }
 
 async function compressImage(file: File, maxSizeKB = 550): Promise<Blob> {
@@ -58,11 +66,11 @@ async function compressImage(file: File, maxSizeKB = 550): Promise<Blob> {
   });
 }
 
-const emptyForm = {
+const emptyForm: ItemFormData = {
   serial: '',
   name: '',
   description: '',
-  category: 'warehouse' as 'warehouse' | 'factory',
+  category: 'warehouse',
   stock_level_required: false,
 };
 
@@ -139,7 +147,7 @@ export function ItemManagement() {
     setFormData({
       serial: item.serial,
       name: item.name,
-      description: item.description,
+      description: item.description ?? '',
       category: item.category,
       stock_level_required: item.stock_level_required || false,
     });
@@ -320,7 +328,7 @@ export function ItemManagement() {
       const others = prev.filter(i => i.category !== rankingCategory);
       return [...others, ...updated].sort((a, b) => {
         if (a.category !== b.category) return a.category.localeCompare(b.category);
-        return a.order_index - b.order_index;
+        return (a.order_index ?? 0) - (b.order_index ?? 0);
       });
     });
   };
@@ -403,7 +411,7 @@ export function ItemManagement() {
           <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('category')}</label>
           <select
             value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value as 'warehouse' | 'factory' })}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           >
             <option value="warehouse">{t('warehouse')}</option>
