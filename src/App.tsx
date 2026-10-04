@@ -2,12 +2,12 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SignIn } from './components/Auth/SignIn';
 import { Layout } from './components/Layout/Layout';
-import { AdminDashboard } from './components/Admin/AdminDashboard';
 import { CustomerDashboard } from './components/Customer/CustomerDashboard';
 import { WarehouseManagerDashboard } from './components/Warehouse/WarehouseManagerDashboard';
 import { FactoryManagerDashboard } from './components/Factory/FactoryManagerDashboard';
 import { GeneralManagerDashboard } from './components/GeneralManager/GeneralManagerDashboard';
 import { AccountantDashboardWithTabs } from './components/Accountant/AccountantDashboardWithTabs';
+import { AdminWorkspace } from './components/Admin/AdminWorkspace';
 
 function AppContent() {
   const { user, profile, loading } = useAuth();
@@ -26,7 +26,7 @@ function AppContent() {
 
   return (
     <Layout>
-      {profile.role === 'admin' && <AdminDashboard />}
+      {profile.role === 'admin' && <AdminWorkspace />}
       {profile.role === 'customer' && <CustomerDashboard />}
       {profile.role === 'warehouse_manager' && <WarehouseManagerDashboard />}
       {profile.role === 'factory_manager' && <FactoryManagerDashboard />}
