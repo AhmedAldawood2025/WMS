@@ -1,0 +1,22 @@
+# One-click deploy on Render (https://render.com).
+# The SQLite database lives on a persistent disk so data survives restarts and redeploys.
+services:
+  - type: web
+    name: spicymeal-wms
+    runtime: node
+    plan: starter            # persistent disks need a paid plan
+    branch: spicymeal-node-8glfj5
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DB_FILE
+        value: /var/data/wms.db
+      - key: COOKIE_SECURE
+        value: "1"
+    disk:
+      name: wms-data
+      mountPath: /var/data
+      sizeGB: 1
